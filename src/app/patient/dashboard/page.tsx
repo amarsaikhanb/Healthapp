@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { PatientPendingForms } from "@/components/patient-pending-forms"
 import { User, Phone, Calendar, Stethoscope } from "lucide-react"
 
 export default async function PatientDashboardPage() {
@@ -20,6 +21,16 @@ export default async function PatientDashboardPage() {
     `)
     .eq("id", user?.id)
     .single()
+
+  // Get pending forms
+  const { data: forms } = await supabase
+    .from("form")
+    .select(`
+      *,
+      doctor:doctor_id(name)
+    `)
+    .eq("patient_id", user?.id)
+    .order("created_at", { ascending: false })
 
   return (
     <div className="p-8 space-y-6">
@@ -111,20 +122,8 @@ export default async function PatientDashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>
-            Your latest health records and appointments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No recent activity to display
-          </p>
-        </CardContent>
-      </Card>
+      {/* Pending Forms */}
+      <PatientPendingForms forms={forms || []} />
     </div>
   )
 }
