@@ -15,16 +15,25 @@ export async function POST(request: NextRequest) {
     
     console.log("Received VAPI webhook:", JSON.stringify(body, null, 2))
 
-    // Extract formId from call metadata
-    const formId = body.call?.metadata?.formId || body.metadata?.formId || body.formId
+    // VAPI sends end-of-call-report in message.type
+    const messageType = body.message?.type
+    
+    // Extract formId from call metadata (nested in the webhook)
+    const formId = body.call?.metadata?.formId || 
+                   body.message?.call?.metadata?.formId ||
+                   body.metadata?.formId || 
+                   body.formId
 
     if (!formId) {
-      console.error("No formId in webhook:", body)
+      console.error("No formId in webhook. Message type:", messageType)
+      console.error("Call metadata:", body.call?.metadata)
       return NextResponse.json(
         { error: "formId is required" },
         { status: 400 }
       )
     }
+
+    console.log(`Processing form submission for formId: ${formId}`)
 
     // Try to extract answers from various VAPI webhook formats
     let answers = body.answers || body.message?.content?.answers || body.data?.answers

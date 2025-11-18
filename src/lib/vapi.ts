@@ -5,6 +5,7 @@
 
 const VAPI_PRIVATE_KEY = process.env.VAPI_PRIVATE_KEY
 const VAPI_PUBLIC_KEY = process.env.VAPI_PUBLIC_KEY
+const VAPI_PHONE_NUMBER_ID = process.env.VAPI_PHONE_NUMBER_ID
 const VAPI_API_URL = 'https://api.vapi.ai'
 
 /**
@@ -36,7 +37,9 @@ export function formatPhoneNumberE164(phoneNumber: string): string {
 }
 
 export interface VapiCallRequest {
+  // Your VAPI phone number (from VAPI dashboard) - optional if VAPI_PHONE_NUMBER_ID is set
   phoneNumberId?: string
+  // The customer being called
   customer?: {
     number: string
     name?: string
@@ -77,13 +80,23 @@ export async function createVapiCall(request: VapiCallRequest): Promise<VapiCall
     throw new Error('VAPI_PRIVATE_KEY is not configured')
   }
 
+  if (!VAPI_PHONE_NUMBER_ID) {
+    throw new Error('VAPI_PHONE_NUMBER_ID is not configured. Please add it to your environment variables.')
+  }
+
+  // Ensure phoneNumberId is set
+  const callRequest = {
+    ...request,
+    phoneNumberId: request.phoneNumberId || VAPI_PHONE_NUMBER_ID,
+  }
+
   const response = await fetch(`${VAPI_API_URL}/call`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${VAPI_PRIVATE_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(callRequest),
   })
 
   if (!response.ok) {
@@ -158,10 +171,9 @@ IMPORTANT: At the end of the call, you MUST send a server message with the colle
     },
   }
 
-  // Add server callback if provided
-  if (callbackUrl) {
-    assistant.serverUrl = callbackUrl
-  }
+  // Note: We don't use serverUrl because VAPI doesn't send structured answers there.
+  // Instead, we rely on the end-of-call-report webhook to /api/webhooks/vapi
+  // which extracts answers from the transcript.
 
   return assistant
 }

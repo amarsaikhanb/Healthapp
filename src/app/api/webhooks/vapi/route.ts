@@ -14,18 +14,25 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('VAPI Webhook received:', body)
+    console.log('VAPI Webhook received:', JSON.stringify(body, null, 2))
 
-    const { event, call } = body
+    // VAPI sends webhooks with message.type = 'end-of-call-report'
+    const messageType = body.message?.type || body.event
+    const call = body.call || body.message?.call
 
     // Handle call ended event
-    if (event === 'call-ended' || event === 'end-of-call-report') {
-      const { metadata, transcript, messages } = call
+    if (messageType === 'end-of-call-report' || messageType === 'call-ended') {
+      const metadata = call?.metadata
+      const transcript = body.transcript || body.message?.transcript
+      const messages = body.messages || body.message?.artifact?.messages
 
       if (!metadata?.formId) {
         console.log('No formId in metadata, skipping')
+        console.log('Available metadata:', metadata)
         return NextResponse.json({ received: true })
       }
+
+      console.log(`Processing webhook for form: ${metadata.formId}`)
 
       // Extract answers from conversation
       const answers = extractAnswersFromTranscript(

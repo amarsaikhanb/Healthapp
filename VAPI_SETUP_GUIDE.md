@@ -42,7 +42,15 @@ Form marked as submitted ✅
 3. Go to Dashboard → API Keys
 4. Copy your **Private Key** and **Public Key**
 
-### Step 2: Add to Environment Variables
+### Step 2: Configure Phone Number in VAPI Dashboard
+
+1. Go to VAPI Dashboard → Phone Numbers
+2. Either:
+   - **Buy a new phone number** through VAPI, OR
+   - **Import your existing number** (Twilio, Vonage, etc.)
+3. Copy the **Phone Number ID** (looks like: `6f62f1c5-a276-4cc8-9fae-ef3ab83402d9`)
+
+### Step 3: Add to Environment Variables
 
 Add to `.env.local`:
 
@@ -50,6 +58,7 @@ Add to `.env.local`:
 # VAPI Keys
 VAPI_PRIVATE_KEY=your_vapi_private_key_here
 VAPI_PUBLIC_KEY=your_vapi_public_key_here
+VAPI_PHONE_NUMBER_ID=6f62f1c5-a276-4cc8-9fae-ef3ab83402d9  # Your phone number ID from VAPI
 
 # Cron Secret (generate random string)
 CRON_SECRET=your_random_secret_string_here
