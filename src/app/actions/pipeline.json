@@ -1,0 +1,88 @@
+{
+  "components": [
+    {
+      "id": "webhook_1",
+      "provider": "webhook",
+      "config": {
+        "hideForm": true,
+        "mode": "Source",
+        "parameters": {},
+        "type": "webhook"
+      },
+      "ui": {
+        "position": {
+          "x": 320,
+          "y": 220
+        },
+        "measured": {
+          "width": 150,
+          "height": 36
+        },
+        "data": {
+          "provider": "webhook",
+          "class": "source",
+          "type": "default"
+        },
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "parse_1",
+      "provider": "parse",
+      "config": {},
+      "ui": {
+        "position": {
+          "x": 580,
+          "y": 220
+        },
+        "measured": {
+          "width": 150,
+          "height": 36
+        },
+        "data": {
+          "provider": "parse",
+          "class": "data",
+          "type": "default"
+        },
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "tags",
+          "from": "webhook_1"
+        }
+      ]
+    },
+    {
+      "id": "response_1",
+      "provider": "response",
+      "config": {
+        "lanes": []
+      },
+      "ui": {
+        "position": {
+          "x": 860,
+          "y": 200
+        },
+        "measured": {
+          "width": 150,
+          "height": 36
+        },
+        "data": {
+          "provider": "response",
+          "class": "infrastructure",
+          "type": "default"
+        },
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "text",
+          "from": "parse_1"
+        }
+      ]
+    }
+  ],
+  "servicesVersion": 1,
+  "id": "b9be2081-eccc-45b9-ba1a-3cf33311398e"
+}

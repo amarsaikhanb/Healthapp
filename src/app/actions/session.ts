@@ -1,36 +1,40 @@
-"use server"
+"use server";
 
-import { createClient } from "@/lib/supabase/server"
-import { revalidatePath } from "next/cache"
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { AparaviDTC } from "aparavi-dtc-node-sdk";
+import AparaviPipeline from "./pipeline.json";
 
 export type Session = {
-  id: string
-  patient_id: string
-  doctor_id: string
-  transcript: string | null
-  summary: string | null
-  inferences: string[] | null
-  medications: any[] | null
-  created_at: string
-  ended_at: string | null
-}
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  transcript: string | null;
+  summary: string | null;
+  inferences: string[] | null;
+  medications: any[] | null;
+  created_at: string;
+  ended_at: string | null;
+};
 
 export type ActionResult = {
-  success: boolean
-  error?: string
-  data?: Session
-}
+  success: boolean;
+  error?: string;
+  data?: Session;
+};
 
 /**
  * Create a new session
  */
 export async function createSession(patientId: string): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return { success: false, error: "Not authenticated" }
+      return { success: false, error: "Not authenticated" };
     }
 
     // Verify patient belongs to this doctor
@@ -39,10 +43,10 @@ export async function createSession(patientId: string): Promise<ActionResult> {
       .select("id")
       .eq("id", patientId)
       .eq("doctor_id", user.id)
-      .single()
+      .single();
 
     if (!patient) {
-      return { success: false, error: "Patient not found or unauthorized" }
+      return { success: false, error: "Patient not found or unauthorized" };
     }
 
     const { data, error } = await supabase
@@ -52,19 +56,20 @@ export async function createSession(patientId: string): Promise<ActionResult> {
         doctor_id: user.id,
       })
       .select()
-      .single()
+      .single();
 
     if (error) {
-      return { success: false, error: error.message }
+      return { success: false, error: error.message };
     }
 
-    revalidatePath(`/dashboard/patients/${patientId}`)
-    return { success: true, data }
+    revalidatePath(`/dashboard/patients/${patientId}`);
+    return { success: true, data };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to create session",
-    }
+      error:
+        error instanceof Error ? error.message : "Failed to create session",
+    };
   }
 }
 
@@ -73,14 +78,16 @@ export async function createSession(patientId: string): Promise<ActionResult> {
  */
 export async function updateSessionTranscript(
   sessionId: string,
-  transcript: string
+  transcript: string,
 ): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return { success: false, error: "Not authenticated" }
+      return { success: false, error: "Not authenticated" };
     }
 
     const { data, error } = await supabase
@@ -89,18 +96,19 @@ export async function updateSessionTranscript(
       .eq("id", sessionId)
       .eq("doctor_id", user.id)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      return { success: false, error: error.message }
+      return { success: false, error: error.message };
     }
 
-    return { success: true, data }
+    return { success: true, data };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update transcript",
-    }
+      error:
+        error instanceof Error ? error.message : "Failed to update transcript",
+    };
   }
 }
 
@@ -109,11 +117,13 @@ export async function updateSessionTranscript(
  */
 export async function endSession(sessionId: string): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return { success: false, error: "Not authenticated" }
+      return { success: false, error: "Not authenticated" };
     }
 
     const { data, error } = await supabase
@@ -122,35 +132,39 @@ export async function endSession(sessionId: string): Promise<ActionResult> {
       .eq("id", sessionId)
       .eq("doctor_id", user.id)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      return { success: false, error: error.message }
+      return { success: false, error: error.message };
     }
 
     if (data.patient_id) {
-      revalidatePath(`/dashboard/patients/${data.patient_id}`)
+      revalidatePath(`/dashboard/patients/${data.patient_id}`);
     }
 
-    return { success: true, data }
+    return { success: true, data };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to end session",
-    }
+    };
   }
 }
 
 /**
  * Get sessions for a patient
  */
-export async function getPatientSessions(patientId: string): Promise<ActionResult> {
+export async function getPatientSessions(
+  patientId: string,
+): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return { success: false, error: "Not authenticated" }
+      return { success: false, error: "Not authenticated" };
     }
 
     const { data, error } = await supabase
@@ -158,18 +172,163 @@ export async function getPatientSessions(patientId: string): Promise<ActionResul
       .select("*")
       .eq("patient_id", patientId)
       .eq("doctor_id", user.id)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false });
 
     if (error) {
-      return { success: false, error: error.message }
+      return { success: false, error: error.message };
     }
 
-    return { success: true, data: data as any }
+    return { success: true, data: data as any };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch sessions",
-    }
+      error:
+        error instanceof Error ? error.message : "Failed to fetch sessions",
+    };
   }
 }
 
+/**
+ * Get sessions for a patient by the patient (user is patient)
+ */
+export async function getPatientSessionsByPatient(): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { data, error } = await supabase
+      .from("session")
+      .select("*")
+      .eq("patient_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: data as any };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to fetch sessions",
+    };
+  }
+}
+
+export async function chatWithAparvi() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser(); // patient side function, user is patient
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const sessions = await getPatientSessionsByPatient();
+
+  const aparaviClient = new AparaviDTC(process.env.APARAVI_API_KEY);
+
+  const pipeline = {
+    pipeline: {
+      components: [
+        {
+          id: "webhook_1",
+          provider: "webhook",
+          config: {
+            hideForm: true,
+            mode: "Source",
+            parameters: {},
+            type: "webhook",
+          },
+          ui: {
+            position: {
+              x: 320,
+              y: 220,
+            },
+            measured: {
+              width: 150,
+              height: 36,
+            },
+            data: {
+              provider: "webhook",
+              class: "source",
+              type: "default",
+            },
+            formDataValid: true,
+          },
+        },
+        {
+          id: "parse_1",
+          provider: "parse",
+          config: {},
+          ui: {
+            position: {
+              x: 580,
+              y: 220,
+            },
+            measured: {
+              width: 150,
+              height: 36,
+            },
+            data: {
+              provider: "parse",
+              class: "data",
+              type: "default",
+            },
+            formDataValid: true,
+          },
+          input: [
+            {
+              lane: "tags",
+              from: "webhook_1",
+            },
+          ],
+        },
+        {
+          id: "response_1",
+          provider: "response",
+          config: {
+            lanes: [],
+          },
+          ui: {
+            position: {
+              x: 860,
+              y: 200,
+            },
+            measured: {
+              width: 150,
+              height: 36,
+            },
+            data: {
+              provider: "response",
+              class: "infrastructure",
+              type: "default",
+            },
+            formDataValid: true,
+          },
+          input: [
+            {
+              lane: "text",
+              from: "parse_1",
+            },
+          ],
+        },
+      ],
+      servicesVersion: 1,
+      id: "b9be2081-eccc-45b9-ba1a-3cf33311398e",
+    },
+  };
+
+  await aparaviClient.startTask(pipeline);
+  const result = await aparaviClient.sendToWebhook(sessions);
+
+  return result;
+}
