@@ -124,14 +124,15 @@ export function buildFormAssistant(
     .map((q) => `Question ID: ${q.id}\nQuestion: ${q.question_text}`)
     .join('\n\n')
 
-  const systemPrompt = `You are a friendly medical assistant calling ${patientName} to collect health information.
+  const systemPrompt = `You are a friendly medical assistant calling ${patientName} to collect health information for the ${formTitle}.
 
 Your task:
-1. Introduce yourself: "Hi ${patientName}, this is a health assessment call from your doctor's office regarding the ${formTitle}."
-2. Ask each question one at a time
-3. Listen carefully to their answers
-4. Confirm each answer before moving to the next question
-5. Thank them at the end
+1. If they confirm it's a good time, proceed with the questions
+2. If not, politely mention they can fill out the form online at their convenience
+3. Ask each question one at a time
+4. Listen carefully to their answers
+5. Confirm each answer before moving to the next question
+6. Thank them at the end
 
 Questions to ask:
 ${questionsText}
@@ -140,18 +141,10 @@ Guidelines:
 - Be warm and professional
 - Speak clearly and at a moderate pace
 - If they don't understand, rephrase the question
-- If they ask to reschedule, politely let them know they can fill out the form online instead
 - Keep responses brief and natural
+- Don't rush - give them time to think and respond
 
-After collecting all answers, say: "Thank you for your time! Your responses have been recorded and your doctor will review them. Have a great day!"
-
-IMPORTANT: At the end of the call, you MUST send a server message with the collected answers using this exact format:
-{
-  "questions": [
-    ${questionsWithIds}
-  ],
-  "instruction": "After collecting all answers, send them to the server in JSON format with this structure: {\"answers\": [{\"question_id\": \"<question-id>\", \"answer_text\": \"<patient-response>\"}]}"
-}`
+After collecting all answers, say: "Thank you for your time, ${patientName}! Your responses have been recorded and your doctor will review them. Have a great day!"`
 
   const assistant: any = {
     name: `Form: ${formTitle}`,
@@ -169,6 +162,7 @@ IMPORTANT: At the end of the call, you MUST send a server message with the colle
       provider: 'playht',
       voiceId: 'jennifer', // Professional female voice
     },
+    firstMessage: `Hi ${patientName}, this is a health assessment call from your doctor's office. We're calling to help you complete the ${formTitle}. This will only take a few minutes. Is now a good time?`,
   }
 
   // Add server configuration for webhooks

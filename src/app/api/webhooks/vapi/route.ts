@@ -14,7 +14,6 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('VAPI Webhook received:', JSON.stringify(body, null, 2))
 
     // VAPI sends webhooks with message.type = 'end-of-call-report'
     const messageType = body.message?.type || body.event
@@ -26,18 +25,15 @@ export async function POST(request: NextRequest) {
       const transcript = body.transcript || body.message?.transcript || body.message?.artifact?.transcript
 
       if (!metadata?.formId) {
-        console.log('No formId in metadata, skipping')
-        console.log('Available metadata:', metadata)
         return NextResponse.json({ received: true })
       }
 
       if (!transcript) {
-        console.log('No transcript found in webhook')
+        console.error('No transcript found in webhook for form:', metadata.formId)
         return NextResponse.json({ received: true })
       }
 
-      console.log(`Processing call transcript for form: ${metadata.formId}`)
-      console.log(`Transcript: ${transcript.substring(0, 200)}...`)
+      console.log(`Processing form ${metadata.formId} - extracting answers from transcript`)
 
       // Get form questions from database
       const { data: questions } = await supabase
@@ -47,7 +43,7 @@ export async function POST(request: NextRequest) {
         .order("question_order", { ascending: true })
 
       if (!questions || questions.length === 0) {
-        console.log('No questions found for form')
+        console.error('No questions found for form:', metadata.formId)
         return NextResponse.json({ received: true })
       }
 
@@ -87,10 +83,10 @@ export async function POST(request: NextRequest) {
             })
             .eq("id", metadata.formId)
 
-          console.log(`Form ${metadata.formId} submitted via VAPI call with ${answers.length} answers`)
+          console.log(`✓ Form ${metadata.formId} submitted via VAPI with ${answers.length} answers`)
         }
       } else {
-        console.log('No answers extracted from transcript')
+        console.error('No answers extracted from transcript for form:', metadata.formId)
       }
     }
 
@@ -203,7 +199,6 @@ Extract the patient's answers to these questions from the transcript.`
         a !== null && a.answer_text !== "Not answered"
       )
 
-    console.log(`Extracted ${mappedAnswers.length} answers from transcript`)
     return mappedAnswers
 
   } catch (error) {

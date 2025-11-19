@@ -50,6 +50,11 @@ export async function makeFormCall(formId: string): Promise<ActionResult> {
       return { success: false, error: "Form already submitted" }
     }
 
+    // Allow retrying calls even if a previous call was made (answers might not have been collected)
+    if (form.call_made_at) {
+      console.log(`Retrying call for form ${formId} (previous call at ${form.call_made_at})`)
+    }
+
     // Get questions
     const { data: questions } = await supabase
       .from("question")
