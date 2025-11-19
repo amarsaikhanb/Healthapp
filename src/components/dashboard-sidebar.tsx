@@ -21,14 +21,25 @@ import {
   Settings,
   LogOut,
   User as UserIcon,
+  ChevronUp,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { doctorTheme } from "@/lib/theme/doctor";
+import { Doctor } from "@/app/actions/doctor";
 
 interface DashboardSidebarProps {
   user: User;
+  doctor: Doctor;
 }
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, doctor }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { collapsed } = useSidebar();
@@ -73,52 +84,38 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     >
       <SidebarHeader>
         <div className="flex items-center justify-between w-full px-2 py-2">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div
-                className={`
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-lg
-                  ${doctorTheme.brandAccentBg}
-                  ${doctorTheme.brandAccentBorder}
-                  border
-                `}
-              >
-                <Activity className={`h-4 w-4 ${doctorTheme.brandSoft}`} />
+          {!collapsed ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`
+                    flex
+                    h-8
+                    w-8
+                    items-center
+                    justify-center
+                    rounded-lg
+                    ${doctorTheme.brandAccentBg}
+                    ${doctorTheme.brandAccentBorder}
+                    border
+                  `}
+                >
+                  <Activity className={`h-4 w-4 ${doctorTheme.brandSoft}`} />
+                </div>
+                <span
+                  className={`
+                    font-semibold
+                    text-sm
+                    ${doctorTheme.textMain}
+                  `}
+                >
+                  Trace
+                </span>
               </div>
-              <span
-                className={`
-                  font-semibold
-                  text-sm
-                  ${doctorTheme.textMain}
-                `}
-              >
-                Trace
-              </span>
-            </div>
-          )}
-
-          {collapsed && (
-            <div
-              className={`
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                mx-auto
-                ${doctorTheme.brandAccentBg}
-                ${doctorTheme.brandAccentBorder}
-                border
-              `}
-            >
-              <Activity className={`h-4 w-4 ${doctorTheme.brandSoft}`} />
-            </div>
+              <SidebarTrigger />
+            </>
+          ) : (
+            <SidebarTrigger className="mx-auto" />
           )}
         </div>
       </SidebarHeader>
@@ -175,37 +172,89 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="space-y-2 pb-3">
-          {!collapsed && (
-            <div className="px-3 py-2 space-y-1 border-t border-dashed border-[#E5E7EB] mt-2">
-              <div className="flex items-center gap-2">
-                <UserIcon className={`h-4 w-4 ${doctorTheme.textSubtle}`} />
-                <p
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`
+                  w-full
+                  justify-start
+                  px-2
+                  py-1.5
+                  h-auto
+                  hover:bg-[#F3F6FF]
+                  rounded-none
+                  ${doctorTheme.textMain}
+                `}
+              >
+              {!collapsed ? (
+                <>
+                  <div
+                    className={`
+                      flex
+                      h-7
+                      w-7
+                      items-center
+                      justify-center
+                      rounded-full
+                      ${doctorTheme.brandAccentBg}
+                      flex-shrink-0
+                      mr-2
+                    `}
+                  >
+                    <UserIcon className={`h-3.5 w-3.5 ${doctorTheme.brandSoft}`} />
+                  </div>
+                  <span className={`text-sm font-medium truncate flex-1 text-left ${doctorTheme.textMain}`}>
+                    {doctor?.name || "Doctor"}
+                  </span>
+                  <ChevronUp className={`h-3.5 w-3.5 ${doctorTheme.textSubtle} flex-shrink-0 ml-1`} />
+                </>
+              ) : (
+                <div
                   className={`
-                    text-sm
-                    font-medium
-                    truncate
-                    ${doctorTheme.textMain}
+                    flex
+                    h-7
+                    w-7
+                    items-center
+                    justify-center
+                    rounded-full
+                    ${doctorTheme.brandAccentBg}
+                    mx-auto
                   `}
                 >
-                  {user.email}
-                </p>
-              </div>
-            </div>
-          )}
-          <div className="flex items-center gap-2 px-2 pt-2">
-            <SidebarTrigger />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              title="Sign out"
-              className={doctorTheme.textMuted}
-            >
-              <LogOut className="h-5 w-5" />
+                  <UserIcon className={`h-3.5 w-3.5 ${doctorTheme.brandSoft}`} />
+                </div>
+              )}
             </Button>
-          </div>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="end"
+            className="w-56 mb-2"
+          >
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <p className="text-sm font-medium">{doctor?.name || "Doctor"}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push("/dashboard/settings")}
+              className="cursor-pointer"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="cursor-pointer text-destructive focus:text-destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );

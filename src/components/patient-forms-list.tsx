@@ -183,7 +183,7 @@ export function PatientFormsList({ forms, patientName }: PatientFormsListProps) 
                         className="gap-1"
                       >
                         <Phone className="h-3 w-3" />
-                        {callingForm === form.id ? "Calling..." : "Call Patient"}
+                        {callingForm === form.id ? "Calling..." : "Call Patient Now"}
                       </Button>
                     )}
                     <button

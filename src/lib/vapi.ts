@@ -171,9 +171,18 @@ IMPORTANT: At the end of the call, you MUST send a server message with the colle
     },
   }
 
-  // Note: We don't use serverUrl because VAPI doesn't send structured answers there.
-  // Instead, we rely on the end-of-call-report webhook to /api/webhooks/vapi
-  // which extracts answers from the transcript.
+  // Add server configuration for webhooks
+  // This tells VAPI to send end-of-call-report to our webhook endpoint
+  if (callbackUrl) {
+    // Extract base URL from callback URL (remove /api/forms/vapi-submit)
+    const baseUrl = callbackUrl.replace('/api/forms/vapi-submit', '')
+    
+    assistant.server = {
+      url: `${baseUrl}/api/webhooks/vapi`,
+      // Optional: Add a secret for webhook verification
+      // secret: process.env.VAPI_WEBHOOK_SECRET
+    }
+  }
 
   return assistant
 }

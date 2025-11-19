@@ -9,7 +9,7 @@ const supabase = createClient(
 
 /**
  * VAPI Webhook Handler
- * Receives call events and processes form answers
+ * Receives call events and processes form answers using OpenAI
  */
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +23,7 @@ export async function POST(request: NextRequest) {
     // Handle call ended event
     if (messageType === 'end-of-call-report' || messageType === 'call-ended') {
       const metadata = call?.metadata
-      const transcript = body.transcript || body.message?.transcript
-      const messages = body.messages || body.message?.artifact?.messages
+      const transcript = body.transcript || body.message?.transcript || body.message?.artifact?.transcript
 
       if (!metadata?.formId) {
         console.log('No formId in metadata, skipping')
@@ -32,17 +31,32 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true })
       }
 
-      console.log(`Processing webhook for form: ${metadata.formId}`)
+      if (!transcript) {
+        console.log('No transcript found in webhook')
+        return NextResponse.json({ received: true })
+      }
 
-      // Extract answers from conversation
-      const answers = extractAnswersFromTranscript(
-        messages || [],
-        metadata.questions || []
-      )
+      console.log(`Processing call transcript for form: ${metadata.formId}`)
+      console.log(`Transcript: ${transcript.substring(0, 200)}...`)
 
-      if (answers.length > 0) {
+      // Get form questions from database
+      const { data: questions } = await supabase
+        .from("question")
+        .select("id, question_text, question_order")
+        .eq("form_id", metadata.formId)
+        .order("question_order", { ascending: true })
+
+      if (!questions || questions.length === 0) {
+        console.log('No questions found for form')
+        return NextResponse.json({ received: true })
+      }
+
+      // Extract answers using OpenAI
+      const answers = await extractAnswersWithAI(transcript, questions)
+
+      if (answers && answers.length > 0) {
         // Save answers to database
-        const answersData = answers.map((a: any) => ({
+        const answersData = answers.map((a) => ({
           form_id: metadata.formId,
           question_id: a.question_id,
           answer_text: a.answer_text,
@@ -67,12 +81,16 @@ export async function POST(request: NextRequest) {
             .from("form")
             .update({ 
               submitted_at: new Date().toISOString(),
-              submitted_via: "vapi_call"
+              submitted_via: "vapi_call",
+              call_made_at: new Date().toISOString(),
+              call_sid: call?.id || null
             })
             .eq("id", metadata.formId)
 
-          console.log(`Form ${metadata.formId} submitted via VAPI call`)
+          console.log(`Form ${metadata.formId} submitted via VAPI call with ${answers.length} answers`)
         }
+      } else {
+        console.log('No answers extracted from transcript')
       }
     }
 
@@ -87,53 +105,111 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Extract answers from conversation transcript
- * This is a simple implementation - can be enhanced with AI
+ * Extract answers from transcript using OpenAI
  */
-function extractAnswersFromTranscript(
-  messages: Array<{ role: string; content: string }>,
-  questions: Array<{ id: string; text: string }>
-): Array<{ question_id: string; answer_text: string }> {
-  const answers: Array<{ question_id: string; answer_text: string }> = []
+async function extractAnswersWithAI(
+  transcript: string,
+  questions: Array<{ id: string; question_text: string; question_order: number }>
+): Promise<Array<{ question_id: string; answer_text: string }>> {
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+  
+  if (!OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY not configured')
+    return []
+  }
 
-  // Group consecutive messages
-  let currentQuestionIndex = 0
-  let collectingAnswer = false
-  let currentAnswer = ''
+  try {
+    // Build the prompt with questions
+    const questionsText = questions
+      .map((q, idx) => `${idx + 1}. ${q.question_text}`)
+      .join('\n')
 
-  for (const message of messages) {
-    if (message.role === 'assistant') {
-      // Check if this message contains a question
-      const containsQuestion = questions.some(q =>
-        message.content.toLowerCase().includes(q.text.toLowerCase().slice(0, 20))
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a medical assistant extracting information from phone call transcripts. 
+Your task is to extract the patient's answers to specific health questions from the conversation.
+
+Return ONLY valid JSON in this exact format:
+{
+  "answers": [
+    {
+      "question_number": 1,
+      "answer": "patient's answer here"
+    }
+  ]
+}
+
+Rules:
+- Extract the patient's actual responses to each question
+- If a question wasn't answered, use "Not answered" 
+- Keep answers concise but complete
+- Use the patient's own words when possible
+- Return valid JSON only, no additional text`
+          },
+          {
+            role: "user",
+            content: `Call Transcript:
+${transcript}
+
+Questions to extract answers for:
+${questionsText}
+
+Extract the patient's answers to these questions from the transcript.`
+          }
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('OpenAI API error:', error)
+      return []
+    }
+
+    const result = await response.json()
+    const content = result.choices[0]?.message?.content
+    
+    if (!content) {
+      console.error('No content in OpenAI response')
+      return []
+    }
+
+    const parsed = JSON.parse(content)
+    const extractedAnswers = parsed.answers || []
+
+    // Map back to question IDs
+    const mappedAnswers = extractedAnswers
+      .map((a: { question_number: number; answer: string }) => {
+        const question = questions[a.question_number - 1]
+        if (!question) return null
+        
+        return {
+          question_id: question.id,
+          answer_text: a.answer
+        }
+      })
+      .filter((a): a is { question_id: string; answer_text: string } => 
+        a !== null && a.answer_text !== "Not answered"
       )
 
-      if (containsQuestion && currentAnswer && currentQuestionIndex < questions.length) {
-        // Save previous answer
-        answers.push({
-          question_id: questions[currentQuestionIndex - 1]?.id,
-          answer_text: currentAnswer.trim(),
-        })
-        currentAnswer = ''
-        currentQuestionIndex++
-      }
+    console.log(`Extracted ${mappedAnswers.length} answers from transcript`)
+    return mappedAnswers
 
-      collectingAnswer = containsQuestion
-    } else if (message.role === 'user' && collectingAnswer) {
-      // Collect user response
-      currentAnswer += ' ' + message.content
-    }
+  } catch (error) {
+    console.error('Error extracting answers with AI:', error)
+    return []
   }
-
-  // Save last answer
-  if (currentAnswer && currentQuestionIndex < questions.length) {
-    answers.push({
-      question_id: questions[currentQuestionIndex]?.id,
-      answer_text: currentAnswer.trim(),
-    })
-  }
-
-  return answers.filter(a => a.question_id && a.answer_text)
 }
 
 // Allow GET for testing

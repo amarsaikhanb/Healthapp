@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-export type DoctorProfile = {
+export type Doctor = {
   id: string
   name: string
   phone_number: string | null
@@ -12,7 +12,7 @@ export type DoctorProfile = {
 export type ActionResult = {
   success: boolean
   error?: string
-  data?: DoctorProfile
+  data?: Doctor
 }
 
 /**

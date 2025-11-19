@@ -11,7 +11,7 @@ export type Session = {
   transcript: string | null;
   summary: string | null;
   inferences: string[] | null;
-  medications: any[] | null;
+  medications: string[] | null;
   created_at: string;
   ended_at: string | null;
 };
@@ -73,7 +73,7 @@ export async function createSession(patientId: string): Promise<ActionResult> {
 }
 
 /**
- * Update session with transcript
+ * Update session with transcript and generate AI analysis
  */
 export async function updateSessionTranscript(
   sessionId: string,
@@ -89,9 +89,29 @@ export async function updateSessionTranscript(
       return { success: false, error: "Not authenticated" };
     }
 
+    // Generate AI analysis using OpenAI GPT-4o-mini (cheapest model)
+    let summary = null;
+    let inferences: string[] | null = null;
+    let medications: string[] | null = null;
+
+    try {
+      const analysisResult = await generateSessionAnalysis(transcript);
+      summary = analysisResult.summary;
+      inferences = analysisResult.inferences;
+      medications = analysisResult.medications;
+    } catch (analysisError) {
+      console.error("Failed to generate AI analysis:", analysisError);
+      // Continue without analysis - transcript will still be saved
+    }
+
     const { data, error } = await supabase
       .from("session")
-      .update({ transcript })
+      .update({ 
+        transcript,
+        summary,
+        inferences,
+        medications
+      })
       .eq("id", sessionId)
       .eq("doctor_id", user.id)
       .select()
@@ -109,6 +129,70 @@ export async function updateSessionTranscript(
         error instanceof Error ? error.message : "Failed to update transcript",
     };
   }
+}
+
+/**
+ * Generate session analysis using OpenAI
+ */
+async function generateSessionAnalysis(transcript: string): Promise<{
+  summary: string;
+  inferences: string[];
+  medications: string[];
+}> {
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  
+  if (!OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini", // Cheapest OpenAI model
+      messages: [
+        {
+          role: "system",
+          content: `You are a medical assistant analyzing doctor-patient consultation transcripts. 
+Extract key information and provide it in valid JSON format with these fields:
+- summary: A concise 2-3 sentence summary of the consultation
+- inferences: Array of clinical observations, symptoms, or diagnoses mentioned
+- medications: Array of medications discussed (name only, one per item)
+
+Return ONLY valid JSON, no additional text.`
+        },
+        {
+          role: "user",
+          content: `Analyze this consultation transcript:\n\n${transcript}`
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenAI API error: ${error}`);
+  }
+
+  const result = await response.json();
+  const content = result.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error("No content in OpenAI response");
+  }
+
+  const analysis = JSON.parse(content);
+  
+  return {
+    summary: analysis.summary || "No summary generated",
+    inferences: Array.isArray(analysis.inferences) ? analysis.inferences : [],
+    medications: Array.isArray(analysis.medications) ? analysis.medications : []
+  };
 }
 
 /**
@@ -146,6 +230,57 @@ export async function endSession(sessionId: string): Promise<ActionResult> {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to end session",
+    };
+  }
+}
+
+/**
+ * Delete a session
+ */
+export async function deleteSession(sessionId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    // First, get the session to verify ownership and get patient_id for revalidation
+    const { data: session } = await supabase
+      .from("session")
+      .select("patient_id")
+      .eq("id", sessionId)
+      .eq("doctor_id", user.id)
+      .single();
+
+    if (!session) {
+      return { success: false, error: "Session not found or unauthorized" };
+    }
+
+    // Delete the session
+    const { error } = await supabase
+      .from("session")
+      .delete()
+      .eq("id", sessionId)
+      .eq("doctor_id", user.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    // Revalidate the patient page
+    if (session.patient_id) {
+      revalidatePath(`/dashboard/patients/${session.patient_id}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete session",
     };
   }
 }

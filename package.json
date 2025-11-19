@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "rag": "cd pathway_rag && python main.py",
+    "rag:install": "cd pathway_rag && pip install -r requirements.txt"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
