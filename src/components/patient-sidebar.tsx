@@ -104,7 +104,7 @@ export function PatientSidebar({ patient }: PatientSidebarProps) {
                   <span
                     className={`font-semibold text-sm ${patientTheme.textMain}`}
                   >
-                    Trace
+                    LiveAD
                   </span>
                   <p className={`text-xs ${patientTheme.textSubtle}`}>
                     Patient Portal

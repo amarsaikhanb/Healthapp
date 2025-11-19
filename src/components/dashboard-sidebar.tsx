@@ -109,7 +109,7 @@ export function DashboardSidebar({ user, doctor }: DashboardSidebarProps) {
                     ${doctorTheme.textMain}
                   `}
                 >
-                  Trace
+                  LiveAD
                 </span>
               </div>
               <SidebarTrigger />

@@ -14,7 +14,8 @@ import {
   ChevronUp,
   Pill,
   ClipboardList,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from "lucide-react"
 import Link from "next/link"
 import { deleteSession } from "@/app/actions/session"
@@ -257,20 +258,30 @@ export function SessionsList({
                       </h5>
                       <div className="space-y-2">
                         {session.medications.map((med, idx: number) => (
-                          <div key={idx} className="bg-background p-3 rounded-lg border">
-                            {typeof med === 'string' ? (
-                              <p className="font-medium text-sm">{med}</p>
-                            ) : (
-                              <>
-                                <p className="font-medium text-sm">{med.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  <span className="font-medium">Reason:</span> {med.reason}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  <span className="font-medium">Frequency:</span> {med.frequency}
-                                </p>
-                              </>
-                            )}
+                          <div key={idx} className="bg-background p-3 rounded-lg border flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              {typeof med === 'string' ? (
+                                <p className="font-medium text-sm">{med}</p>
+                              ) : (
+                                <>
+                                  <p className="font-medium text-sm">{med.name}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    <span className="font-medium">Reason:</span> {med.reason}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">Frequency:</span> {med.frequency}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0 h-8 gap-1"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Approve
+                            </Button>
                           </div>
                         ))}
                       </div>

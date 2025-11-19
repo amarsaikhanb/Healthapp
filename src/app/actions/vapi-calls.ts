@@ -23,7 +23,7 @@ export async function makeFormCall(formId: string): Promise<ActionResult> {
       return { success: false, error: "Not authenticated" }
     }
 
-    // Get form with patient and questions
+    // Get form with patient, doctor and questions
     const { data: form, error: formError } = await supabase
       .from("form")
       .select(`
@@ -32,6 +32,9 @@ export async function makeFormCall(formId: string): Promise<ActionResult> {
           id,
           name,
           phone_number
+        ),
+        doctor:doctor_id (
+          name
         )
       `)
       .eq("id", formId)
@@ -75,6 +78,7 @@ export async function makeFormCall(formId: string): Promise<ActionResult> {
     // Build VAPI assistant with callback URL
     const assistant = buildFormAssistant(
       form.patient.name || "Patient",
+      form.doctor?.name || "your doctor",
       form.title,
       questions,
       callbackUrl
@@ -146,6 +150,9 @@ export async function checkOverdueForms(): Promise<ActionResult> {
           id,
           name,
           phone_number
+        ),
+        doctor:doctor_id (
+          name
         )
       `)
       .is("submitted_at", null)
@@ -189,6 +196,7 @@ export async function checkOverdueForms(): Promise<ActionResult> {
         // Build assistant with callback
         const assistant = buildFormAssistant(
           form.patient.name || "Patient",
+          form.doctor?.name || "your doctor",
           form.title,
           questions,
           callbackUrl
