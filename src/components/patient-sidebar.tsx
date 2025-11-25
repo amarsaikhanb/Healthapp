@@ -21,11 +21,20 @@ import {
   LogOut,
   User as UserIcon,
   Activity,
+  ChevronUp,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { patientTheme } from "@/lib/theme/patient";
-
+import { Patient } from "@/app/actions/patient";
 interface PatientSidebarProps {
-  patient: any;
+  patient: Patient;
 }
 
 export function PatientSidebar({ patient }: PatientSidebarProps) {
@@ -73,53 +82,39 @@ export function PatientSidebar({ patient }: PatientSidebarProps) {
     >
       <SidebarHeader>
         <div className="flex items-center justify-between w-full px-2 py-2">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div
-                className={`
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-lg
-                  ${patientTheme.brandAccentBg}
-                  ${patientTheme.brandAccentBorder}
-                  border
-                `}
-              >
-                <Activity className={`h-4 w-4 ${patientTheme.brandSoft}`} />
-              </div>
-              <div className="leading-tight">
-                <span
-                  className={`font-semibold text-sm ${patientTheme.textMain}`}
+          {!collapsed ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`
+                    flex
+                    h-8
+                    w-8
+                    items-center
+                    justify-center
+                    rounded-lg
+                    ${patientTheme.brandAccentBg}
+                    ${patientTheme.brandAccentBorder}
+                    border
+                  `}
                 >
-                  Trace
-                </span>
-                <p className={`text-xs ${patientTheme.textSubtle}`}>
-                  Patient Portal
-                </p>
+                  <Activity className={`h-4 w-4 ${patientTheme.brandSoft}`} />
+                </div>
+                <div className="leading-tight">
+                  <span
+                    className={`font-semibold text-sm ${patientTheme.textMain}`}
+                  >
+                    LiveAD
+                  </span>
+                  <p className={`text-xs ${patientTheme.textSubtle}`}>
+                    Patient Portal
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-
-          {collapsed && (
-            <div
-              className={`
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                ${patientTheme.brandAccentBg}
-                ${patientTheme.brandAccentBorder}
-                border
-                mx-auto
-              `}
-            >
-              <Activity className={`h-4 w-4 ${patientTheme.brandSoft}`} />
-            </div>
+              <SidebarTrigger />
+            </>
+          ) : (
+            <SidebarTrigger className="mx-auto" />
           )}
         </div>
       </SidebarHeader>
@@ -180,50 +175,91 @@ export function PatientSidebar({ patient }: PatientSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="space-y-2 pb-3">
-          {!collapsed && patient && (
-            <div className="px-3 py-2 space-y-1 border-t pt-3 mt-2 border-dashed border-[#FFE3CC]">
-              <div className="flex items-center gap-2">
-                <UserIcon className={`h-4 w-4 ${patientTheme.textSubtle}`} />
-                <p
-                  className={`
-                    text-sm
-                    font-medium
-                    truncate
-                    ${patientTheme.textMain}
-                  `}
-                >
-                  {patient.name}
-                </p>
-              </div>
-              <p
+        {patient && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
                 className={`
-                  text-xs
-                  truncate
-                  ${patientTheme.textMuted}
+                  w-full
+                  justify-start
+                  px-2
+                  py-1.5
+                  h-auto
+                  hover:bg-[#FFF3E5]
+                  rounded-none
+                  ${patientTheme.textMain}
                 `}
               >
-                {patient.email}
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-2 px-2 pt-2">
-            <SidebarTrigger />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              title="Sign out"
-              className={`
-                hover:bg-[#FFF3E5]
-                ${patientTheme.textMuted}
-              `}
+                {!collapsed ? (
+                  <>
+                    <div
+                      className={`
+                        flex
+                        h-7
+                        w-7
+                        items-center
+                        justify-center
+                        rounded-full
+                        ${patientTheme.brandAccentBg}
+                        flex-shrink-0
+                        mr-2
+                      `}
+                    >
+                      <UserIcon className={`h-3.5 w-3.5 ${patientTheme.brandSoft}`} />
+                    </div>
+                    <span className={`text-sm font-medium truncate flex-1 text-left ${patientTheme.textMain}`}>
+                      {patient.name || "Patient"}
+                    </span>
+                    <ChevronUp className={`h-3.5 w-3.5 ${patientTheme.textSubtle} flex-shrink-0 ml-1`} />
+                  </>
+                ) : (
+                  <div
+                    className={`
+                      flex
+                      h-7
+                      w-7
+                      items-center
+                      justify-center
+                      rounded-full
+                      ${patientTheme.brandAccentBg}
+                      mx-auto
+                    `}
+                  >
+                    <UserIcon className={`h-3.5 w-3.5 ${patientTheme.brandSoft}`} />
+                  </div>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              align="end"
+              className="w-56 mb-2"
             >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <p className="text-sm font-medium">{patient.name || "Patient"}</p>
+                  <p className="text-xs text-muted-foreground">{patient.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push("/patient/settings")}
+                className="cursor-pointer"
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

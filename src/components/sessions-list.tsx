@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,9 +13,12 @@ import {
   ChevronDown,
   ChevronUp,
   Pill,
-  ClipboardList
+  ClipboardList,
+  Trash2,
+  CheckCircle2
 } from "lucide-react"
 import Link from "next/link"
+import { deleteSession } from "@/app/actions/session"
 
 interface Session {
   id: string
@@ -23,7 +27,11 @@ interface Session {
   transcript: string | null
   summary: string | null
   inferences: string[] | null
-  medications: any[] | null
+  medications: Array<{
+    name: string
+    reason: string
+    frequency: string
+  }> | string[] | null
   created_at: string
   ended_at: string | null
 }
@@ -41,7 +49,9 @@ export function SessionsList({
   patientName,
   invitationAccepted 
 }: SessionsListProps) {
+  const router = useRouter()
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set())
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
 
   const toggleSession = (sessionId: string) => {
     const newExpanded = new Set(expandedSessions)
@@ -51,6 +61,22 @@ export function SessionsList({
       newExpanded.add(sessionId)
     }
     setExpandedSessions(newExpanded)
+  }
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm("Are you sure you want to delete this session? This action cannot be undone.")) {
+      return
+    }
+
+    setDeletingSessionId(sessionId)
+    const result = await deleteSession(sessionId)
+    setDeletingSessionId(null)
+
+    if (result.success) {
+      router.refresh()
+    } else {
+      alert(`Failed to delete session: ${result.error}`)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -231,19 +257,31 @@ export function SessionsList({
                         Medications
                       </h5>
                       <div className="space-y-2">
-                        {session.medications.map((med: any, idx: number) => (
-                          <div key={idx} className="bg-background p-3 rounded-lg">
-                            <p className="font-medium text-sm">{med.name || "Medication"}</p>
-                            {med.dosage && (
-                              <p className="text-xs text-muted-foreground">
-                                Dosage: {med.dosage}
-                              </p>
-                            )}
-                            {med.instructions && (
-                              <p className="text-xs text-muted-foreground">
-                                {med.instructions}
-                              </p>
-                            )}
+                        {session.medications.map((med, idx: number) => (
+                          <div key={idx} className="bg-background p-3 rounded-lg border flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              {typeof med === 'string' ? (
+                                <p className="font-medium text-sm">{med}</p>
+                              ) : (
+                                <>
+                                  <p className="font-medium text-sm">{med.name}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    <span className="font-medium">Reason:</span> {med.reason}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">Frequency:</span> {med.frequency}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0 h-8 gap-1"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Approve
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -251,12 +289,29 @@ export function SessionsList({
                   )}
 
                   {/* Session Metadata */}
-                  <div className="pt-4 border-t space-y-1 text-xs text-muted-foreground">
-                    <p>Session ID: {session.id.slice(0, 8)}...</p>
-                    <p>Started: {formatDate(session.created_at)}</p>
-                    {session.ended_at && (
-                      <p>Ended: {formatDate(session.ended_at)}</p>
-                    )}
+                  <div className="pt-4 border-t space-y-3">
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <p>Session ID: {session.id.slice(0, 8)}...</p>
+                      <p>Started: {formatDate(session.created_at)}</p>
+                      {session.ended_at && (
+                        <p>Ended: {formatDate(session.ended_at)}</p>
+                      )}
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteSession(session.id)
+                        }}
+                        disabled={deletingSessionId === session.id}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingSessionId === session.id ? "Deleting..." : "Delete Session"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

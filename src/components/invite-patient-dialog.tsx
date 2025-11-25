@@ -67,6 +67,8 @@ export function InvitePatientDialog() {
             ${doctorTheme.brandAccentBg}
             ${doctorTheme.brandAccentBorder}
             ${doctorTheme.brand}
+            hover:bg-[#C3D6FF]
+            transition-colors
           `}
         >
           <UserPlus className="h-4 w-4" />
@@ -192,6 +194,8 @@ export function InvitePatientDialog() {
                 ${doctorTheme.brandAccentBorder}
                 ${doctorTheme.brand}
                 border
+                hover:bg-[#C3D6FF]
+                transition-colors
               `}
             >
               {isPending ? (

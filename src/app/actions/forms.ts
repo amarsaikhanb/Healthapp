@@ -274,13 +274,15 @@ export async function submitFormAnswers(
     }
 
     // Mark form as submitted
-    const { error: updateError } = await supabase
+    const { data: updatedForm, error: updateError } = await supabase
       .from("form")
       .update({
         submitted_at: new Date().toISOString(),
         submitted_via: "manual",
       })
-      .eq("id", formId);
+      .eq("id", formId)
+      .select("patient_id")
+      .single();
 
     if (updateError) {
       return { success: false, error: "Failed to update form status" };

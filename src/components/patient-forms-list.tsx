@@ -174,7 +174,7 @@ export function PatientFormsList({ forms, patientName }: PatientFormsListProps) 
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {!form.submitted_at && !form.call_scheduled && (
+                    {!form.submitted_at && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -183,7 +183,7 @@ export function PatientFormsList({ forms, patientName }: PatientFormsListProps) 
                         className="gap-1"
                       >
                         <Phone className="h-3 w-3" />
-                        {callingForm === form.id ? "Calling..." : "Call Patient"}
+                        {callingForm === form.id ? "Calling..." : form.call_made_at ? "Retry Call" : "Call Patient Now"}
                       </Button>
                     )}
                     <button

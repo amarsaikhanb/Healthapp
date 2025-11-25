@@ -5,8 +5,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Health App - Dashboard",
-  description: "Health tracking application with secure authentication",
+  title: "LiveAD",
+  description: "",
 }
 
 export default function RootLayout({

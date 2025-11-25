@@ -112,6 +112,7 @@ export async function createVapiCall(request: VapiCallRequest): Promise<VapiCall
  */
 export function buildFormAssistant(
   patientName: string,
+  doctorName: string,
   formTitle: string,
   questions: Array<{ id: string; question_text: string }>,
   callbackUrl?: string
@@ -124,34 +125,34 @@ export function buildFormAssistant(
     .map((q) => `Question ID: ${q.id}\nQuestion: ${q.question_text}`)
     .join('\n\n')
 
-  const systemPrompt = `You are a friendly medical assistant calling ${patientName} to collect health information.
+  const systemPrompt = `You are LiveAD, a friendly medical assistant calling ${patientName} on behalf of Dr. ${doctorName} for a daily check-in.
 
 Your task:
-1. Introduce yourself: "Hi ${patientName}, this is a health assessment call from your doctor's office regarding the ${formTitle}."
-2. Ask each question one at a time
-3. Listen carefully to their answers
-4. Confirm each answer before moving to the next question
-5. Thank them at the end
+1. If they confirm it's a good time, proceed with the check-in questions
+2. If not, politely ask when would be a better time or mention they can fill this out online
+3. Ask each question one at a time and wait for their response
+4. Listen carefully and acknowledge their answers naturally
+5. If an answer is unclear, politely ask for clarification
+6. Keep the conversation brief and focused
 
-Questions to ask:
+Check-in questions:
 ${questionsText}
 
 Guidelines:
-- Be warm and professional
-- Speak clearly and at a moderate pace
-- If they don't understand, rephrase the question
-- If they ask to reschedule, politely let them know they can fill out the form online instead
-- Keep responses brief and natural
+- Be warm, caring, and professional
+- Speak clearly at a comfortable pace
+- Show empathy if they mention any concerns
+- Keep your responses brief and conversational
+- Don't rush - this is about their wellbeing
+- If they mention anything urgent or concerning, acknowledge it and let them know their doctor will be notified
 
-After collecting all answers, say: "Thank you for your time! Your responses have been recorded and your doctor will review them. Have a great day!"
+After completing the check-in:
+1. Thank the patient and confirm their answers were logged
+2. If they mentioned any concerning symptoms or worsening conditions, acknowledge this specifically and assure them you'll alert Dr. ${doctorName}
+3. Remind them to contact their care team if anything gets worse
+4. End with a warm closing and remind them about their next check-in tomorrow
 
-IMPORTANT: At the end of the call, you MUST send a server message with the collected answers using this exact format:
-{
-  "questions": [
-    ${questionsWithIds}
-  ],
-  "instruction": "After collecting all answers, send them to the server in JSON format with this structure: {\"answers\": [{\"question_id\": \"<question-id>\", \"answer_text\": \"<patient-response>\"}]}"
-}`
+Example closing: "Thank you, ${patientName}. I've logged your answers. [If concerns mentioned: Since [specific concern] today, I'll alert Dr. ${doctorName} so they can review your symptoms.] If anything gets worse, please contact your care team. Have a good rest of your day, and don't forget — your next check-in is tomorrow."`
 
   const assistant: any = {
     name: `Form: ${formTitle}`,
@@ -169,11 +170,21 @@ IMPORTANT: At the end of the call, you MUST send a server message with the colle
       provider: 'playht',
       voiceId: 'jennifer', // Professional female voice
     },
+    firstMessage: `Hi ${patientName}, this is LiveAD calling on behalf of Dr. ${doctorName}. We noticed you missed today's check-in. I'll ask you a few quick questions to help us track your recovery. Let's begin.`,
   }
 
-  // Note: We don't use serverUrl because VAPI doesn't send structured answers there.
-  // Instead, we rely on the end-of-call-report webhook to /api/webhooks/vapi
-  // which extracts answers from the transcript.
+  // Add server configuration for webhooks
+  // This tells VAPI to send end-of-call-report to our webhook endpoint
+  if (callbackUrl) {
+    // Extract base URL from callback URL (remove /api/forms/vapi-submit)
+    const baseUrl = callbackUrl.replace('/api/forms/vapi-submit', '')
+    
+    assistant.server = {
+      url: `${baseUrl}/api/webhooks/vapi`,
+      // Optional: Add a secret for webhook verification
+      // secret: process.env.VAPI_WEBHOOK_SECRET
+    }
+  }
 
   return assistant
 }

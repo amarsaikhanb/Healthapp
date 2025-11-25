@@ -7,6 +7,7 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { SessionsList } from "@/components/sessions-list"
 import { CreateFormDialog } from "@/components/create-form-dialog"
 import { PatientFormsList } from "@/components/patient-forms-list"
+import { PatientRAGChatbot } from "@/components/patient-rag-chatbot"
 import { 
   ArrowLeft, 
   User, 
@@ -285,6 +286,14 @@ export default async function PatientDetailPage({ params }: PageProps) {
         patientName={patient.name || "Patient"}
         invitationAccepted={patient.invitation_accepted}
       />
+
+      {/* RAG Chatbot - Fixed position, appears on all patient pages */}
+      {patient.invitation_accepted && (
+        <PatientRAGChatbot 
+          patientId={patient.id}
+          patientName={patient.name || "Patient"}
+        />
+      )}
     </div>
   )
 }

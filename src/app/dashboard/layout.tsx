@@ -28,10 +28,17 @@ export default async function DashboardLayout({
     }
   }
 
+  // Get doctor data
+  const { data: doctor } = await supabase
+    .from("doctor")
+    .select("*")
+    .eq("id", user.id)
+    .single()
+
   return (
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden">
-        <DashboardSidebar user={user} />
+        <DashboardSidebar user={user} doctor={doctor} />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
